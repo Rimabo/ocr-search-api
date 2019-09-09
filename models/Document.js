@@ -11,8 +11,9 @@ const DocumentSchema = mongoose.Schema({
         type: [PageSchema.schema],
         required: true
     },
-    time: {
+    createdAt: {
         type: Date,
+        expires: 43200,
         default: Date.now
     }
 });
