@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const Request = require('request');
 const rp = require('request-promise');
 const Document = require('./models/Document');
+const Page = require('./models/Page').model;
+const Word = require('./models/Word').model;
 require('dotenv/config');
 
 function extractContent(url) {
@@ -68,15 +70,60 @@ function extractContent(url) {
     });
 }
 
-function processDocument(url) {
-    extractContent(url)
-        .then(result => {
-        console.log(result);
-        })
-        .catch(err => {
-            throw(err);
-        })
+function parseDocumentIntoDb(url, result){
+    return new Promise(function(resolve, reject) {
+        var pages = [];
+        result.forEach(page => {
+            var words = [];
+            page.lines.forEach(line => {
+                line.words.forEach(word => {
+                    if(!word.confidence){
+                        var db_word = new Word({
+                            word: word.text,
+                            bounding_box: word.boundingBox
+                        });
+                        words.push(db_word);
+                    }
+                })
+            });
+            var db_page = new Page({
+                page_number: page.page,
+                orientation: page.clockwiseOrientation,
+                width: page.width,
+                height: page.height,
+                unit: page.unit,
+                words: words
+            });
+            pages.push(db_page);
+        });
+        var db_document = new Document({
+            url: url,
+            pages: pages,
+        });
+        db_document.save()
+            .catch(err => {
+                reject(err);
+            })
+    });
+}
 
+function processDocument(url) {
+    return new Promise(function(resolve, reject) {
+        extractContent(url)
+            .then(content => {
+                if (content.recognitionResults){
+                    parseDocumentIntoDb(url, content.recognitionResults)
+                        .catch(err => {
+                            reject(err);
+                        })
+                } else {
+                    reject('Failed to read document');
+                }
+            })
+            .catch(err => {
+                reject(err);
+            })
+    });
 }
 
 function exists(url){
@@ -84,13 +131,14 @@ function exists(url){
 }
 
 function search(url, term_list) {
-    if (!exists(url))
-        console.log('url did not exist in db');
-        try{
-            processDocument(url);
-        } catch (err) {
-            throw(err);
-        }
+    return new Promise(function(resolve, reject) {
+        if (!exists(url))
+            console.log('url did not exist in db');
+            processDocument(url)
+                .catch(err => {
+                    reject(err);
+                });
+    });
 }
 
 
