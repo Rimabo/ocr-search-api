@@ -18,11 +18,17 @@ app.post('/', async (req, res) => {
     try{
         utility.validateUrl(req.body.url);
         if(req.body.term_list){
-            dbUtility.search(req.body.url, req.body.term_list);
+            dbUtility.search(req.body.url, req.body.term_list)
+                .then(response_json => {
+                    res.status(200);
+                    res.json({result: response_json});
+                })
+                .catch(err => {
+                    res.status(400);
+                    res.json({message: err});
+                })
         }
-        res.status(200);
-        res.json({message: 'success'});
-    }catch(err) {
+    } catch(err) {
         res.status(400);
         res.json({message: err});
     }
