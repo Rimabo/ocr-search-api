@@ -101,6 +101,9 @@ function parseDocumentIntoDb(url, result){
             pages: pages,
         });
         db_document.save()
+            .then(() => {
+                resolve();
+            })
             .catch(err => {
                 reject(err);
             })
@@ -108,11 +111,15 @@ function parseDocumentIntoDb(url, result){
 }
 
 function processDocument(url) {
+    console.log('processDocument');
     return new Promise(function(resolve, reject) {
         extractContent(url)
             .then(content => {
                 if (content.recognitionResults){
                     parseDocumentIntoDb(url, content.recognitionResults)
+                        .then(() => {
+                            resolve();
+                        })
                         .catch(err => {
                             reject(err);
                         })
@@ -126,18 +133,68 @@ function processDocument(url) {
     });
 }
 
-function exists(url){
-    return !!Document.find({url: url});
+function searchTerm(url, term_list){
+    return new Promise(function(resolve, reject) {
+        Document.findOne({url: url}, function(err, doc) {
+            if(err){
+                reject(err);
+            }
+            var response_json = {};
+            var matched_pages = [];
+            doc.pages.forEach(page => {
+                var page_obj = {};
+                page_obj['number'] = page.page_number;
+                var matched_words = [];
+                page.words.forEach(word => {
+                    if(word.word == term_list){
+                        var values = Object.keys(word.bounding_box).map(function(key) {
+                            return word.bounding_box[key].toString();
+                        });
+                        matched_words.push(values);
+                    }
+                });
+                page_obj['words'] = matched_words;
+                matched_pages.push(page_obj);
+            });
+            response_json['pages'] = matched_pages;
+            resolve(response_json);
+        });
+    });
+
 }
 
 function search(url, term_list) {
     return new Promise(function(resolve, reject) {
-        if (!exists(url))
-            console.log('url did not exist in db');
-            processDocument(url)
-                .catch(err => {
-                    reject(err);
-                });
+        Document.findOne({url: url}, function(err, doc) {
+            if(err)
+                reject(err);
+            if(!doc) {
+                console.log('url did not exist in db');
+                processDocument(url)
+                    .then(() => {
+                        console.log('finished processing');
+                        searchTerm(url,term_list)
+                            .then(response_json => {
+                                resolve(response_json);
+                            })
+                            .catch(err => {
+                                reject(err);
+                            })
+                    })
+                    .catch(err => {
+                        reject(err);
+                    });
+            } else {
+                console.log('url exists');
+                searchTerm(url,term_list)
+                    .then(response_json => {
+                        resolve(response_json);
+                    })
+                    .catch(err => {
+                        reject(err);
+                    })
+            }
+        });
     });
 }
 
