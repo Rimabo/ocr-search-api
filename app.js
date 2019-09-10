@@ -53,5 +53,5 @@ mongoose.connect(process.env.DB_CONNECTION,
 
 
 // Start listening to server
-app.listen(3000);
+app.listen(process.env.PORT || 3000);
 
