@@ -13,7 +13,7 @@ const DocumentSchema = mongoose.Schema({
     },
     createdAt: {
         type: Date,
-        expires: 43200,
+        index: {expires: 36000000},
         default: Date.now
     }
 });
