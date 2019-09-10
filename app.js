@@ -4,11 +4,15 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const utility = require('./utility');
 const dbUtility = require('./db_utility');
+const compression = require('compression');
+const helmet = require('helmet');
 require('dotenv/config');
 
 const app = express();
 
 // Middleware
+app.use(compression());
+app.use(helmet());
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -17,11 +21,16 @@ app.use(bodyParser.json());
 app.post('/', async (req, res) => {
     try{
         utility.validateUrl(req.body.url);
-        if(req.body.term_list){
+        if(req.body.term_list.length > 0){
             dbUtility.search(req.body.url, req.body.term_list)
                 .then(response_json => {
-                    res.status(200);
-                    res.json({result: response_json});
+                    if(!(Object.entries(response_json).length === 0 && response_json.constructor === Object)){
+                        res.status(200);
+                        res.json({result: response_json});
+                    } else {
+                        res.status(404);
+                        res.json({message: 'not found'});
+                    }
                 })
                 .catch(err => {
                     res.status(400);
