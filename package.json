@@ -1,6 +1,9 @@
 {
   "name": "ocr-search-api",
   "version": "1.0.0",
+  "engines": {
+    "node": "12.8.0"
+  },
   "description": "serves terms in a pdf document through ocr for pdf search bars",
   "main": "index.js",
   "scripts": {
