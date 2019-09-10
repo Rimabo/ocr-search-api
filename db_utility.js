@@ -41,7 +41,6 @@ function extractContent(url) {
                         return new Promise(function (resolve, reject) {
                             rp(secondRequestOptions)
                                 .then(response => {
-                                    console.log(response.status);
                                     if (response.recognitionResults) {
                                         resolve(response);
                                     } else if (response.status && response.status == 'Failed') {
@@ -111,7 +110,6 @@ function parseDocumentIntoDb(url, result){
 }
 
 function processDocument(url) {
-    console.log('processDocument');
     return new Promise(function(resolve, reject) {
         extractContent(url)
             .then(content => {
@@ -139,24 +137,30 @@ function searchTerm(url, term_list){
             if(err){
                 reject(err);
             }
-            var response_json = {};
-            var matched_pages = [];
+            let response_json = {};
+            let matched_pages = [];
             doc.pages.forEach(page => {
-                var page_obj = {};
-                page_obj['number'] = page.page_number;
-                var matched_words = [];
+                let page_obj = {};
+                let matched_words = [];
                 page.words.forEach(word => {
                     if(word.word == term_list){
-                        var values = Object.keys(word.bounding_box).map(function(key) {
+                        let values = Object.keys(word.bounding_box).map(function(key) {
                             return word.bounding_box[key].toString();
                         });
                         matched_words.push(values);
                     }
                 });
-                page_obj['words'] = matched_words;
-                matched_pages.push(page_obj);
+                if(matched_words.length > 0){
+                    page_obj['number'] = page.page_number;
+                    page_obj['words'] = matched_words;
+                    page_obj['height'] = page.height;
+                    page_obj['width'] = page.width;
+                    matched_pages.push(page_obj);
+                }
             });
-            response_json['pages'] = matched_pages;
+            if(matched_pages.length > 0){
+                response_json['pages'] = matched_pages;
+            }
             resolve(response_json);
         });
     });
@@ -169,11 +173,9 @@ function search(url, term_list) {
             if(err)
                 reject(err);
             if(!doc) {
-                console.log('url did not exist in db');
                 processDocument(url)
                     .then(() => {
-                        console.log('finished processing');
-                        searchTerm(url,term_list)
+                        searchTerm(url,term_list.toLowerCase())
                             .then(response_json => {
                                 resolve(response_json);
                             })
@@ -185,8 +187,7 @@ function search(url, term_list) {
                         reject(err);
                     });
             } else {
-                console.log('url exists');
-                searchTerm(url,term_list)
+                searchTerm(url,term_list.toLowerCase())
                     .then(response_json => {
                         resolve(response_json);
                     })
