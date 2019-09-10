@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const WordSchema = mongoose.Schema({
     word: {
         type: String,
+        lowercase: true,
         required: true
     },
     bounding_box: {
