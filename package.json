@@ -4,7 +4,7 @@
   "description": "serves terms in a pdf document through ocr for pdf search bars",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon app.js"
+    "start": "node app.js"
   },
   "author": "",
   "license": "ISC",
